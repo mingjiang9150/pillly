@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Pillly</title>
+
+<!-- iOS PWA -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Pillly">
+<meta name="theme-color" content="#F5F3EF">
+
+<!-- App Icon: generated inline as a data URI SVG -->
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='38' fill='%23F5F3EF'/%3E%3Cg transform='rotate(-35 90 90)'%3E%3Crect x='54' y='54' width='72' height='72' rx='36' fill='%234A7C6F'/%3E%3Crect x='90' y='54' width='36' height='72' rx='0' fill='%237BB5A8'/%3E%3Crect x='90' y='54' width='36' height='72' rx='0' fill='%237BB5A8'/%3E%3Cellipse cx='126' cy='90' rx='36' ry='36' fill='%237BB5A8'/%3E%3Cline x1='90' y1='57' x2='90' y2='123' stroke='%23F5F3EF' stroke-width='2.5'/%3E%3C/g%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F5F3EF;
+  --card: #FDFCFB;
+  --card2: #EEEBE6;
+  --line: #E6E2DB;
+  --line2: #D5D0C8;
+  --muted: #A09890;
+  --text: #1E1A16;
+  --text2: #4C453D;
+  --accent: #4A7C6F;
+  --accent-bg: #EAF3F0;
+  --accent-light: #7BB5A8;
+  --warn: #C8813A;
+  --warn-bg: #FDF0E4;
+  --danger: #B85450;
+  --danger-bg: #FAEDEC;
+  --r: 16px;
+  --shadow: 0 1px 2px rgba(30,20,10,0.04), 0 4px 20px rgba(30,20,10,0.07);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html,body { height:100%; overscroll-behavior:none; }
+body {
+  font-family: 'DM Sans', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  max-width: 430px;
+  margin: 0 auto;
+  min-height: 100vh;
+  padding-bottom: calc(90px + env(safe-area-inset-bottom));
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+.status {
+  display:flex; justify-content:space-between; align-items:center;
+  padding: calc(14px + env(safe-area-inset-top)) 24px 0;
+  font-size: 12px; font-weight: 600; color: var(--text2);
+  position: relative;
+}
+.nav {
+  position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+  width:100%; max-width:430px;
+  background: rgba(247,245,242,0.92);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--line);
+  display:flex; padding: 10px 0 0; z-index:100;
+  padding-bottom: max(26px, env(safe-area-inset-bottom));
+}
+::-webkit-scrollbar { width:0; }
+.nav-item {
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;
+  cursor:pointer;
+}
+.nav-icon { width:26px; height:26px; display:flex; align-items:center; justify-content:center; }
+.nav-label { font-size:10px; font-weight:600; color:var(--muted); letter-spacing:0.4px; }
+.nav-item.active .nav-label { color: var(--accent); }
+.nav-item .nav-icon svg { stroke: var(--muted); transition: stroke 0.2s; }
+.nav-item.active .nav-icon svg { stroke: var(--accent); }
+
+/* PAGES */
+.page { display:none; padding:0 20px; }
+.page.active { display:block; }
+.page-hd { padding:18px 0 16px; display:flex; align-items:flex-end; justify-content:space-between; }
+.page-title { font-family:'DM Sans', sans-serif; font-size:34px; font-weight:700; color:var(--text); line-height:1; letter-spacing:-1px; }
+.page-sub { font-size:12px; color:var(--muted); padding-bottom:5px; }
+
+/* PILL AVATAR */
+.med-pill {
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:700; letter-spacing:0.8px;
+  flex-shrink:0; font-family:'DM Sans',sans-serif;
+  border-radius:12px;
+}
+
+/* PROGRESS CARD */
+.prog-card {
+  background: var(--card);
+  border-radius: 20px;
+  padding: 20px 22px;
+  display:flex; align-items:center; gap:18px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--line);
+}
+.arc-wrap { position:relative; width:66px; height:66px; flex-shrink:0; }
+.arc-wrap svg { transform:rotate(-90deg); }
+.arc-bg { fill:none; stroke:var(--line2); stroke-width:5; }
+.arc-fill { fill:none; stroke:var(--accent); stroke-width:5; stroke-linecap:round; transition:stroke-dashoffset 0.6s cubic-bezier(.4,0,.2,1); }
+.arc-label { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:var(--accent); }
+.prog-title { font-size:16px; font-weight:600; color:var(--text); margin-bottom:3px; }
+.prog-sub { font-size:13px; color:var(--muted); line-height:1.5; }
+
+/* MED CARD */
+.med-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 13px 16px;
+  display:flex; align-items:center; gap:13px;
+  margin-bottom: 8px;
+  cursor:pointer; transition: opacity 0.2s;
+  user-select:none; box-shadow: var(--shadow);
+}
+.med-card:active { opacity:0.7; }
+.med-card.taken { opacity:0.38; box-shadow:none; border-color:transparent; }
+.med-info { flex:1; min-width:0; }
+.med-name { font-size:15px; font-weight:600; color:var(--text); margin-bottom:2px; }
+.med-time { font-size:12px; color:var(--muted); }
+.check-ring {
+  width:26px; height:26px; border-radius:50%;
+  border:2px solid var(--line2);
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0; transition:all 0.2s;
+  background: transparent;
+}
+.med-card.taken .check-ring { background:var(--accent); border-color:var(--accent); }
+.check-icon { opacity:0; transition:opacity 0.2s; }
+.med-card.taken .check-icon { opacity:1; }
+
+.time-sep { font-size:11px; font-weight:600; color:var(--muted); letter-spacing:0.8px; text-transform:uppercase; margin:16px 0 8px; }
+
+.empty-state { text-align:center; padding:64px 24px; color:var(--muted); }
+.empty-state p { font-size:14px; line-height:1.8; }
+
+/* CALENDAR */
+.cal-nav-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.cal-month { font-size:15px; font-weight:600; color:var(--text); }
+.cal-btn {
+  background:var(--card); border:1px solid var(--line2);
+  color:var(--muted); border-radius:8px; padding:5px 13px;
+  cursor:pointer; font-size:17px; line-height:1;
+  transition:color 0.15s, border-color 0.15s;
+}
+.cal-btn:hover { color:var(--text); border-color:var(--text2); }
+.cal-card { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:18px 14px 14px; box-shadow:var(--shadow); }
+.cal-wdays { display:grid; grid-template-columns:repeat(7,1fr); margin-bottom:10px; }
+.cal-wday { text-align:center; font-size:10px; font-weight:600; color:var(--muted); letter-spacing:0.6px; }
+.cal-days { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+.cal-day {
+  aspect-ratio:1; display:flex;
+  align-items:center; justify-content:center;
+  border-radius:10px; cursor:pointer; transition:background 0.15s;
+  position:relative;
+}
+.cal-day.empty { cursor:default; }
+.cal-day.future { cursor:default; opacity:0.28; }
+.cal-day:not(.empty):not(.future):hover { background:var(--card2); }
+.cal-day.sel { background:var(--card2); outline:1px solid var(--line2); }
+
+/* Pie chart replaces the number */
+.day-pie-wrap {
+  position:relative; width:28px; height:28px;
+  display:flex; align-items:center; justify-content:center;
+}
+.day-pie-wrap svg { position:absolute; inset:0; }
+.day-num {
+  font-size:12px; font-weight:500; color:var(--text); line-height:1;
+  position:relative; z-index:1;
+}
+/* Full circle (all done) — number becomes white */
+.day-pie-wrap.full .day-num { color:#fff; font-weight:700; }
+/* Today ring */
+.day-pie-wrap.is-today .day-num { color:var(--accent); font-weight:700; }
+
+/* DETAIL */
+.detail-card {
+  background:var(--card); border:1px solid var(--line);
+  border-radius:var(--r); padding:16px; margin-top:12px;
+  box-shadow:var(--shadow); animation:slideIn 0.2s ease;
+}
+@keyframes slideIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+.detail-hd { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+.detail-date { font-size:14px; font-weight:600; color:var(--text); }
+.detail-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); font-size:14px; }
+.detail-row:last-child { border-bottom:none; }
+.detail-bar { width:3px; height:28px; border-radius:2px; flex-shrink:0; }
+.detail-name { flex:1; font-weight:500; color:var(--text); }
+.detail-time { font-size:12px; color:var(--muted); margin-right:4px; }
+.badge { font-size:11px; font-weight:700; letter-spacing:0.4px; padding:3px 9px; border-radius:20px; }
+.badge.ok { background:var(--accent-bg); color:var(--accent); }
+.badge.no { background:var(--danger-bg); color:var(--danger); }
+.badge.na { background:var(--card2); color:var(--muted); }
+
+/* MEDS LIST */
+.add-btn {
+  width:32px; height:32px; border-radius:50%;
+  background:var(--accent); color:#fff;
+  border:none; font-size:21px; font-weight:300;
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  box-shadow: 0 2px 10px rgba(61,122,110,0.35);
+}
+.med-list { background:var(--card); border:1px solid var(--line); border-radius:var(--r); overflow:hidden; box-shadow:var(--shadow); }
+.med-list-row { display:flex; align-items:center; gap:13px; padding:14px 16px; border-bottom:1px solid var(--line); cursor:pointer; transition:background 0.15s; }
+.med-list-row:last-child { border-bottom:none; }
+.med-list-row:active { background:var(--card2); }
+.ml-info { flex:1; }
+.ml-name { font-size:15px; font-weight:600; color:var(--text); margin-bottom:2px; }
+.ml-desc { font-size:12px; color:var(--muted); }
+.ml-arrow { color:var(--line2); font-size:18px; }
+
+/* MODAL */
+.overlay { display:none; position:fixed; inset:0; background:rgba(20,16,12,0.4); backdrop-filter:blur(4px); z-index:200; align-items:flex-end; }
+.overlay.open { display:flex; }
+.sheet {
+  background:var(--card); border-radius:24px 24px 0 0;
+  border-top:1px solid var(--line);
+  padding:16px 20px 48px;
+  width:100%; max-width:430px; margin:0 auto;
+  animation:sheetUp 0.28s cubic-bezier(.4,0,.2,1);
+  max-height:92vh; overflow-y:auto;
+}
+@keyframes sheetUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+.sheet-handle { width:32px; height:3px; background:var(--line2); border-radius:2px; margin:0 auto 20px; }
+.sheet-title { font-size:17px; font-weight:700; text-align:center; margin-bottom:24px; color:var(--text); }
+.field { margin-bottom:18px; }
+.field-label { font-size:11px; font-weight:600; color:var(--muted); letter-spacing:0.7px; text-transform:uppercase; margin-bottom:8px; display:block; }
+.field-input {
+  width:100%; padding:12px 14px;
+  background:var(--bg); border:1px solid var(--line2);
+  border-radius:10px; font-size:15px; font-family:inherit;
+  color:var(--text); outline:none; transition:border-color 0.2s;
+}
+.field-input:focus { border-color:var(--accent); }
+.field-input::placeholder { color:var(--line2); }
+.swatch-row { display:flex; gap:8px; flex-wrap:wrap; }
+.swatch { width:32px; height:32px; border-radius:50%; cursor:pointer; border:2.5px solid transparent; transition:all 0.15s; opacity:0.85; }
+.swatch.sel { border-color:var(--text); transform:scale(1.15); opacity:1; }
+.time-list { display:flex; flex-direction:column; gap:8px; }
+.time-row { display:flex; align-items:center; gap:10px; }
+.time-input {
+  flex:1; padding:11px 14px;
+  background:var(--bg); border:1px solid var(--line2);
+  border-radius:10px; font-size:15px; font-family:inherit;
+  color:var(--text); outline:none;
+}
+.time-input:focus { border-color:var(--accent); }
+.del-time { width:28px; height:28px; border-radius:50%; background:var(--danger-bg); color:var(--danger); border:none; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.add-time-btn { width:100%; padding:11px; background:none; border:1px dashed var(--line2); border-radius:10px; color:var(--muted); font-size:13px; font-weight:600; font-family:inherit; cursor:pointer; margin-top:8px; transition:border-color 0.2s,color 0.2s; }
+.add-time-btn:hover { border-color:var(--accent); color:var(--accent); }
+.btn { width:100%; padding:14px; border-radius:12px; font-size:15px; font-weight:700; font-family:inherit; cursor:pointer; border:none; margin-top:10px; }
+.btn-accent { background:var(--accent); color:#fff; }
+.btn-danger { background:var(--danger-bg); color:var(--danger); }
+
+/* PILLLY WORDMARK */
+.pillly-wordmark {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--accent);
+  pointer-events: none;
+  user-select: none;
+}
+.pillly-wordmark::after {
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  background: var(--accent-light);
+  border-radius: 50%;
+  margin-left: 1px;
+  vertical-align: middle;
+  margin-bottom: 2px;
+  opacity: 0.8;
+}
+
+
+.filter-pill {
+  display:flex; align-items:center; gap:6px;
+  padding:6px 12px 6px 8px;
+  border-radius:20px; border:1.5px solid var(--line2);
+  background:var(--card); cursor:pointer;
+  font-size:12px; font-weight:600; color:var(--muted);
+  transition:all 0.15s; white-space:nowrap;
+}
+.filter-pill:active { opacity:0.7; }
+.filter-pill .fp-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.filter-pill.active { border-color:var(--color,var(--accent)); color:var(--color,var(--accent)); background:var(--color-bg,var(--accent-bg)); }
+.filter-pill.all { padding:6px 14px; }
+.filter-pill.all.active { border-color:var(--text2); color:var(--text2); background:var(--card2); }
+.toast { position:fixed; top:64px; left:50%; transform:translateX(-50%) translateY(-16px); background:var(--text); color:#fff; padding:10px 20px; border-radius:24px; font-size:13px; font-weight:500; z-index:400; opacity:0; transition:all 0.3s; white-space:nowrap; }
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="status">
+  <span id="statusTime">9:41</span>
+  <span class="pillly-wordmark">Pillly</span>
+  <span style="display:flex;gap:5px;align-items:center;color:var(--text2)">
+    <svg width="15" height="11" viewBox="0 0 15 11" fill="currentColor">
+      <rect x="0" y="4" width="2.5" height="7" rx="1" opacity=".35"/>
+      <rect x="4" y="2.5" width="2.5" height="8.5" rx="1" opacity=".55"/>
+      <rect x="8" y="1" width="2.5" height="10" rx="1" opacity=".75"/>
+      <rect x="12" y="0" width="3" height="11" rx="1"/>
+    </svg>
+    <svg width="22" height="11" viewBox="0 0 22 11" fill="none">
+      <rect x=".5" y=".5" width="17" height="10" rx="2.5" stroke="currentColor" stroke-opacity=".4"/>
+      <rect x="1.5" y="1.5" width="13" height="8" rx="1.5" fill="currentColor" opacity=".75"/>
+      <path d="M19 3.5v4a2 2 0 000-4z" fill="currentColor" opacity=".4"/>
+    </svg>
+  </span>
+</div>
+
+<!-- TODAY -->
+<div class="page active" id="page-today">
+  <div class="page-hd">
+    <div>
+      <div class="page-title">今天</div>
+      <div class="page-sub" id="todaySub"></div>
+    </div>
+  </div>
+  <div class="prog-card">
+    <div class="arc-wrap">
+      <svg width="66" height="66" viewBox="0 0 66 66">
+        <circle class="arc-bg" cx="33" cy="33" r="27"/>
+        <circle class="arc-fill" id="arcFill" cx="33" cy="33" r="27" stroke-dasharray="169.6" stroke-dashoffset="169.6"/>
+      </svg>
+      <div class="arc-label" id="arcLabel">—</div>
+    </div>
+    <div>
+      <div class="prog-title" id="progTitle">今日服药</div>
+      <div class="prog-sub" id="progSub">暂无药物记录</div>
+    </div>
+  </div>
+  <div id="todayList"></div>
+</div>
+
+<!-- CALENDAR -->
+<div class="page" id="page-calendar">
+  <div class="page-hd"><div class="page-title">记录</div></div>
+  <div id="calFilter" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px"></div>
+  <div class="cal-nav-row">
+    <button class="cal-btn" onclick="changeMonth(-1)">‹</button>
+    <div class="cal-month" id="calLabel"></div>
+    <button class="cal-btn" onclick="changeMonth(1)">›</button>
+  </div>
+  <div class="cal-card">
+    <div class="cal-wdays">
+      <div class="cal-wday">日</div><div class="cal-wday">一</div><div class="cal-wday">二</div>
+      <div class="cal-wday">三</div><div class="cal-wday">四</div><div class="cal-wday">五</div><div class="cal-wday">六</div>
+    </div>
+    <div class="cal-days" id="calDays"></div>
+  </div>
+  <div id="calDetail"></div>
+</div>
+
+<!-- MEDS -->
+<div class="page" id="page-meds">
+  <div class="page-hd">
+    <div class="page-title">药物</div>
+    <button class="add-btn" onclick="openAdd()">+</button>
+  </div>
+  <div id="medsList"></div>
+</div>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-item active" onclick="switchTab('today',this)">
+    <div class="nav-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+      </svg>
+    </div>
+    <div class="nav-label">今天</div>
+  </div>
+  <div class="nav-item" onclick="switchTab('calendar',this)">
+    <div class="nav-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/>
+      </svg>
+    </div>
+    <div class="nav-label">记录</div>
+  </div>
+  <div class="nav-item" onclick="switchTab('meds',this)">
+    <div class="nav-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 002 8.5c0 2.3 1.5 4.05 3 5.5l7 7 7-7z"/>
+      </svg>
+    </div>
+    <div class="nav-label">药物</div>
+  </div>
+</nav>
+
+<!-- MODAL -->
+<div class="overlay" id="modal" onclick="onOverlay(event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="modalTitle">添加药物</div>
+    <div class="field">
+      <label class="field-label">药物名称</label>
+      <input class="field-input" id="nameInput" placeholder="例：维生素 D3" type="text">
+    </div>
+    <div class="field">
+      <label class="field-label">标识颜色</label>
+      <div class="swatch-row" id="swatches"></div>
+    </div>
+    <div class="field">
+      <label class="field-label">提醒时间</label>
+      <div class="time-list" id="timeList"></div>
+      <button class="add-time-btn" onclick="addTime()">＋ 添加时间</button>
+    </div>
+    <button class="btn btn-accent" onclick="saveMed()">保存</button>
+    <button class="btn btn-danger" id="delBtn" style="display:none" onclick="deleteMed()">删除此药物</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const PALETTE_DISPLAY = ['#7DBFB0','#7BAFD4','#D4956A','#9E8DC4','#C47878','#6DB5A8','#C9A84C','#7BA8C8','#B87AAE','#8DB87A'];
+const PALETTE_ACTUAL  = ['#3D7A6E','#3A6E96','#8C5A32','#5E4E8C','#8C3E3E','#2E7A6E','#7A6028','#3A5E82','#7A3E6E','#4E7A3A'];
+let meds = JSON.parse(localStorage.getItem('meds_v4') || '[]');
+let records = JSON.parse(localStorage.getItem('recs_v4') || '{}');
+let editId=null, selColor=PALETTE_ACTUAL[0], selColorIdx=0, selDay=null, calY, calM, filterMedId=null;
+const today=new Date(), todayStr=ds(today);
+
+function ds(d){return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;}
+function p(n){return String(n).padStart(2,'0');}
+function save(){localStorage.setItem('meds_v4',JSON.stringify(meds));localStorage.setItem('recs_v4',JSON.stringify(records));}
+let _toastTimer=null;
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  if(_toastTimer)clearTimeout(_toastTimer);
+  _toastTimer=setTimeout(()=>{t.classList.remove('show');_toastTimer=null;},2000);
+}
+
+function getNow(){return new Date();}
+function getTodayStr(){return ds(getNow());}
+function initials(name){const w=name.trim().split(/[\s\-·]+/);return w.length>=2?(w[0][0]+(w[1][0]||'')).toUpperCase():name.slice(0,2).toUpperCase();}
+
+function pillHtml(med,sz=44){
+  const r=Math.round(sz*.27);
+  // Warm tinted background, rich text color
+  return `<div class="med-pill" style="width:${sz}px;height:${sz}px;border-radius:${r}px;background:${med.color}1E;color:${med.color};font-size:${sz<40?10:11}px;border:1.5px solid ${med.color}35;letter-spacing:0.5px">${initials(med.name)}</div>`;
+}
+
+function renderCalFilter(){
+  const wrap=document.getElementById('calFilter');
+  if(!meds.length){wrap.innerHTML='';return;}
+  // "全部" pill
+  const allActive=filterMedId===null;
+  let html=`<div class="filter-pill all${allActive?' active':''}" onclick="setFilter(null)">全部</div>`;
+  meds.forEach(m=>{
+    const active=filterMedId===m.id;
+    // hex to rgb for bg tint
+    html+=`<div class="filter-pill${active?' active':''}" style="--color:${m.color};--color-bg:${m.color}18" onclick="setFilter('${m.id}')">
+      <div class="fp-dot" style="background:${m.color}"></div>${m.name}
+    </div>`;
+  });
+  wrap.innerHTML=html;
+}
+
+function setFilter(id){
+  filterMedId=id; selDay=null;
+  document.getElementById('calDetail').innerHTML='';
+  renderCalFilter(); renderCal();
+}
+
+
+function switchTab(tab,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+tab).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  el.classList.add('active');
+  if(tab==='today')renderToday();
+  if(tab==='calendar'){renderCalFilter();renderCal();}
+  if(tab==='meds')renderMeds();
+}
+
+function renderToday(){
+  const now=getNow(), todayStr=getTodayStr();
+  const days=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+  document.getElementById('todaySub').textContent=`${now.getMonth()+1}月${now.getDate()}日 · ${days[now.getDay()]}`;
+  const list=document.getElementById('todayList'); list.innerHTML='';
+  const doses=[]; meds.forEach(m=>(m.times||[]).forEach(t=>doses.push({m,t})));
+  if(!doses.length){list.innerHTML=`<div class="empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="color:var(--line2);margin-bottom:16px"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 002 8.5c0 2.3 1.5 4.05 3 5.5l7 7 7-7z"/></svg><p>还没有添加药物<br>前往「药物」页面开始添加</p></div>`;updateArc(0,0);return;}
+  const rec=records[todayStr]||{}; let taken=0;
+
+  // Group by time first, then within each group: untaken first
+  const byTime={};
+  doses.forEach(({m,t})=>{(byTime[t]=byTime[t]||[]).push(m);});
+  const timeKeys=Object.keys(byTime).sort();
+
+  timeKeys.forEach(time=>{
+    // Sort within group: untaken first
+    const ms=[...byTime[time]].sort((a,b)=>{
+      const ak=!!rec[`${a.id}_${time}`], bk=!!rec[`${b.id}_${time}`];
+      return ak===bk?0:ak?1:-1;
+    });
+    const sep=document.createElement('div'); sep.className='time-sep'; sep.textContent=time; list.appendChild(sep);
+    ms.forEach(med=>{
+      const key=`${med.id}_${time}`, isTaken=!!rec[key]; if(isTaken)taken++;
+      const card=document.createElement('div'); card.className='med-card'+(isTaken?' taken':'');
+      card.innerHTML=`${pillHtml(med)}<div class="med-info"><div class="med-name">${med.name}</div><div class="med-time">${time}</div></div><div class="check-ring"><svg class="check-icon" width="12" height="9" viewBox="0 0 12 9" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1,4.5 4.5,8 11,1"/></svg></div>`;
+      card.addEventListener('click',()=>toggleDose(med.id,time,card,key,todayStr));
+      list.appendChild(card);
+    });
+  });
+  updateArc(taken,doses.length);
+}
+
+function toggleDose(medId,time,card,key,todayStr){
+  if(!records[todayStr])records[todayStr]={};
+  records[todayStr][key]=!records[todayStr][key]; save();
+  const taken=records[todayStr][key];
+  if(taken) toast('已记录服药 ✓');
+  renderToday();
+}
+
+function updateArc(taken,total){
+  const circ=169.6,pct=total?Math.round(taken/total*100):0;
+  document.getElementById('arcFill').style.strokeDashoffset=circ-circ*pct/100;
+  document.getElementById('arcLabel').textContent=total?pct+'%':'—';
+  document.getElementById('progTitle').textContent=taken===total&&total>0?'全部完成 ✓':'今日服药';
+  document.getElementById('progSub').textContent=total?`已服 ${taken} 次，共 ${total} 次`:'暂无药物记录';
+}
+
+function renderCal(){
+  const todayStr=getTodayStr();
+  calY=calY||getNow().getFullYear(); calM=calM!==undefined?calM:getNow().getMonth();
+  document.getElementById('calLabel').textContent=`${calY} 年 ${calM+1} 月`;
+  const firstDay=new Date(calY,calM,1).getDay(), days=new Date(calY,calM+1,0).getDate();
+  const c=document.getElementById('calDays'); c.innerHTML='';
+  for(let i=0;i<firstDay;i++){const e=document.createElement('div');e.className='cal-day empty';c.appendChild(e);}
+  for(let d=1;d<=days;d++){
+    const dstr=`${calY}-${p(calM+1)}-${p(d)}`, isToday=dstr===todayStr, isFuture=dstr>todayStr;
+    const cell=document.createElement('div');
+    cell.className='cal-day'+(isFuture?' future':'')+(dstr===selDay?' sel':'');
+
+    const rec=records[dstr]||{};
+    const activeMeds=filterMedId ? meds.filter(m=>m.id===filterMedId) : meds;
+    const allDoses=[]; activeMeds.forEach(m=>(m.times||[]).forEach(t=>allDoses.push(`${m.id}_${t}`)));
+    const total=allDoses.length;
+    const taken=!isFuture?allDoses.filter(k=>rec[k]).length:0;
+    const pct=total>0?taken/total:0;
+    const isComplete=total>0&&taken===total;
+
+    // SVG pie: 28x28, circle r=13 centered at 14,14
+    const R=13, cx=14, cy=14;
+    let bgFill='none', bgStroke='var(--line2)', bgStrokeW=1.5;
+    let piePath='', numColor='var(--text)', numWeight=500;
+
+    if(!isFuture && total>0){
+      if(isComplete){
+        // Full solid circle — rich sage
+        bgFill='var(--accent)'; bgStroke='none'; bgStrokeW=0;
+        numColor='#fff'; numWeight=700;
+      } else if(taken>0){
+        // Partial: warm tinted bg + saturated wedge
+        bgFill='var(--accent-bg)'; bgStroke='var(--accent-light)'; bgStrokeW=1;
+        // Draw pie slice using arc path
+        const angle=pct*2*Math.PI;
+        const x1=cx+R*Math.sin(0); const y1=cy-R*Math.cos(0);
+        const x2=cx+R*Math.sin(angle); const y2=cy-R*Math.cos(angle);
+        const largeArc=angle>Math.PI?1:0;
+        piePath=`<path d="M${cx},${cy} L${x1},${y1} A${R},${R} 0 ${largeArc},1 ${x2},${y2} Z" fill="var(--accent-light)" opacity="0.85"/>`;
+      } else {
+        bgFill='none'; bgStroke='var(--line2)'; bgStrokeW=1.5;
+      }
+    }
+
+    if(isToday && !isComplete){
+      bgStroke='var(--accent)'; bgStrokeW=2;
+      numColor='var(--accent)'; numWeight=700;
+    } else if(isToday && isComplete){
+      numWeight=700;
+    }
+
+    const svgBg=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="${bgFill}" stroke="${bgStroke}" stroke-width="${bgStrokeW}"/>`;
+
+    cell.innerHTML=`
+      <div class="day-pie-wrap">
+        <svg width="28" height="28" viewBox="0 0 28 28" style="position:absolute;inset:0">
+          ${svgBg}${piePath}
+        </svg>
+        <span class="day-num" style="color:${numColor};font-weight:${numWeight};position:relative;z-index:1">${d}</span>
+      </div>`;
+
+    cell.addEventListener('click',()=>{
+      if(isFuture)return;
+      if(selDay===dstr){selDay=null;document.getElementById('calDetail').innerHTML='';}
+      else{selDay=dstr;showDetail(dstr);}
+      renderCal();
+    });
+    c.appendChild(cell);
+  }
+}
+
+function showDetail(dstr){
+  const todayStr=getTodayStr();
+  const rec=records[dstr]||{}, d=new Date(dstr+'T00:00:00');
+  const wdays=['日','一','二','三','四','五','六'];
+  const label=`${d.getMonth()+1} 月 ${d.getDate()} 日（周${wdays[d.getDay()]}）`;
+  const isFuture=dstr>todayStr;
+  const activeMeds=filterMedId ? meds.filter(m=>m.id===filterMedId) : meds;
+  const doses=[]; activeMeds.forEach(m=>(m.times||[]).forEach(t=>doses.push({m,t})));
+  doses.sort((a,b)=>{
+    const ak=!!rec[`${a.m.id}_${a.t}`], bk=!!rec[`${b.m.id}_${b.t}`];
+    if(ak!==bk) return ak?1:-1;
+    return a.t.localeCompare(b.t);
+  });
+  if(!doses.length){document.getElementById('calDetail').innerHTML='';return;}
+  const takenCount=doses.filter(({m,t})=>!!rec[`${m.id}_${t}`]).length;
+  const sc=takenCount===doses.length?'var(--accent)':takenCount===0?'var(--danger)':'var(--warn)';
+  const st=takenCount===doses.length?'全部完成':`${takenCount} / ${doses.length}`;
+  const rows=doses.map(({m,t})=>{
+    const taken=!!rec[`${m.id}_${t}`];
+    const bc=isFuture?'na':taken?'ok':'no', bt=isFuture?'待服':taken?'已服':'未服';
+    return `<div class="detail-row"><div class="detail-bar" style="background:${m.color}"></div><div class="detail-name">${m.name}</div><div class="detail-time">${t}</div><div class="badge ${bc}">${bt}</div></div>`;
+  }).join('');
+  document.getElementById('calDetail').innerHTML=`<div class="detail-card"><div class="detail-hd"><div class="detail-date">${label}</div><div style="font-size:12px;font-weight:700;color:${sc}">${st}</div></div>${rows}</div>`;
+}
+
+function changeMonth(dir){calM+=dir;if(calM<0){calM=11;calY--;}if(calM>11){calM=0;calY++;}selDay=null;document.getElementById('calDetail').innerHTML='';renderCal();}
+
+function renderMeds(){
+  const c=document.getElementById('medsList');
+  if(!meds.length){c.innerHTML=`<div class="empty-state"><p>点击右上角 <strong>+</strong> 添加第一种药物</p></div>`;return;}
+  c.innerHTML=`<div class="med-list">${meds.map(m=>`<div class="med-list-row" onclick="openEdit('${m.id}')">${pillHtml(m)}<div class="ml-info"><div class="ml-name">${m.name}</div><div class="ml-desc">每天 ${m.times.length} 次 · ${m.times.join('、')}</div></div><div class="ml-arrow">›</div></div>`).join('')}</div>`;
+}
+
+function openAdd(){
+  editId=null; selColorIdx=0; selColor=PALETTE_ACTUAL[0];
+  document.getElementById('nameInput').value='';
+  document.getElementById('modalTitle').textContent='添加药物';
+  document.getElementById('delBtn').style.display='none';
+  initSwatches(); initTimes(['08:00']); document.getElementById('modal').classList.add('open');
+}
+// Fix selColorIdx when editing existing med with a color not in palette
+function openEdit(id){
+  const m=meds.find(x=>x.id===id); editId=id; selColor=m.color;
+  selColorIdx=PALETTE_ACTUAL.indexOf(m.color);
+  if(selColorIdx===-1){ selColorIdx=0; selColor=PALETTE_ACTUAL[0]; }
+  document.getElementById('nameInput').value=m.name;
+  document.getElementById('modalTitle').textContent='编辑药物';
+  document.getElementById('delBtn').style.display='block';
+  initSwatches(); initTimes(m.times); document.getElementById('modal').classList.add('open');
+}
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+function onOverlay(e){if(e.target===document.getElementById('modal'))closeModal();}
+function initSwatches(){
+  document.getElementById('swatches').innerHTML = PALETTE_DISPLAY.map((c,i) =>
+    `<div class="swatch${i===selColorIdx?' sel':''}" style="background:${c}" onclick="pickColor(${i},this)"></div>`
+  ).join('');
+}
+function pickColor(i,el){
+  selColorIdx=i; selColor=PALETTE_ACTUAL[i];
+  document.querySelectorAll('.swatch').forEach(s=>s.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function initTimes(ts){document.getElementById('timeList').innerHTML='';ts.forEach(t=>addTimeRow(t));}
+function addTime(){addTimeRow('08:00');}
+function addTimeRow(val='08:00'){const row=document.createElement('div');row.className='time-row';row.innerHTML=`<input class="time-input" type="time" value="${val}"><button class="del-time" onclick="this.parentElement.remove()">−</button>`;document.getElementById('timeList').appendChild(row);}
+function refreshCalIfVisible(){
+  if(document.getElementById('page-calendar').classList.contains('active')){
+    renderCalFilter(); renderCal();
+    if(selDay) showDetail(selDay);
+  }
+}
+function saveMed(){
+  const name=document.getElementById('nameInput').value.trim();
+  if(!name){toast('请输入药物名称');return;}
+  const times=[...new Set([...document.querySelectorAll('.time-input')].map(i=>i.value).filter(Boolean))];
+  if(!times.length){toast('请至少设置一个提醒时间');return;}
+  if(editId){const m=meds.find(x=>x.id===editId);Object.assign(m,{name,color:selColor,times});}
+  else{meds.push({id:Date.now().toString(),name,color:selColor,times});}
+  save(); closeModal(); renderMeds(); renderToday(); refreshCalIfVisible(); toast(editId?'已更新':'已添加');
+}
+function deleteMed(){
+  if(!confirm('确定删除此药物？'))return;
+  if(filterMedId===editId) filterMedId=null;
+  meds=meds.filter(m=>m.id!==editId);
+  save(); closeModal(); renderMeds(); renderToday(); refreshCalIfVisible(); toast('已删除');
+}
+
+let _lastDateStr=getTodayStr();
+function tick(){
+  const n=getNow();
+  document.getElementById('statusTime').textContent=`${n.getHours()}:${p(n.getMinutes())}`;
+  const nowStr=getTodayStr();
+  if(nowStr!==_lastDateStr){
+    // Midnight crossed — refresh today page
+    _lastDateStr=nowStr;
+    if(document.getElementById('page-today').classList.contains('active')) renderToday();
+  }
+}
+setInterval(tick,10000); tick();
+renderToday();
+if(!meds.length){
+  meds=[{id:'1',name:'维生素 D3',color:'#3D7A6E',times:['08:00']},{id:'2',name:'鱼油 Omega',color:'#3A6E96',times:['12:00','20:00']},{id:'3',name:'叶酸',color:'#8C5A32',times:['08:00']}];
+  save(); renderToday();
+}
+</script>
+</body>
+</html>
