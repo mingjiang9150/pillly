@@ -116,9 +116,10 @@ body{
 .gesture-alt-btn{font-size:13px;color:var(--accent);font-weight:600;cursor:pointer;padding:8px;}
 
 .status{
-  display:flex;justify-content:space-between;align-items:center;
+  display:flex;justify-content:flex-end;align-items:center;
   padding:calc(14px + env(safe-area-inset-top)) 24px 0;
   font-size:12px;font-weight:600;color:var(--text2);
+  min-height:calc(44px + env(safe-area-inset-top));
 }
 .pillly-wordmark{font-size:15px;font-weight:700;letter-spacing:-0.5px;color:var(--accent);user-select:none;}
 .pillly-wordmark::after{content:'';display:inline-block;width:5px;height:5px;background:var(--accent-light);border-radius:50%;margin-left:1px;vertical-align:middle;margin-bottom:2px;opacity:0.8;}
@@ -362,9 +363,8 @@ body{
 <div id="mainApp" style="display:none">
 
 <div class="status">
-  <span class="pillly-wordmark">Pillly</span>
   <span id="syncIndicator"></span>
-  <span id="statusTime" style="font-size:12px;font-weight:600;color:var(--text2)"></span>
+  <span class="pillly-wordmark">Pillly</span>
 </div>
 
 <!-- TODAY -->
@@ -538,7 +538,7 @@ body{
       <div id="scheduleExtra" style="display:none"></div>
     </div>
     <div class="field">
-      <label class="field-label">提醒时间</label>
+      <label class="field-label">提醒时间 <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);font-size:10px;">（可选）</span></label>
       <div class="time-list" id="timeList"></div>
       <button class="add-time-btn" onclick="addTime()">＋ 添加时间</button>
     </div>
@@ -642,15 +642,18 @@ function isScheduledForDate(med,dstr){
 function scheduleDesc(med){
   const s=med.schedule||{type:'every_day'};
   const times=med.times||[];
-  const tStr=times.join('、');
-  if(s.type==='every_day') return `每天 ${times.length} 次 · ${tStr}`;
+  const tStr=times.length?times.join('、'):'无提醒';
+  const freq=times.length?`${times.length} 次 · `:'';
+  if(s.type==='every_day') return `每天 ${freq}${tStr}`;
   if(s.type==='weekly'){
-    const sorted=(s.days||[]).map(Number).sort((a,b)=>{const av=a===0?7:a,bv=b===0?7:b;return av-bv;});
+    const days=(s.days||[]).map(Number).filter(d=>d>=0&&d<=6);
+    if(!days.length) return `每周（未选日期）· ${tStr}`;
+    const sorted=days.sort((a,b)=>{const av=a===0?7:a,bv=b===0?7:b;return av-bv;});
     return `每周${sorted.map(d=>WD_LABELS[d]).join('')} · ${tStr}`;
   }
   if(s.type==='interval') return `每 ${Math.max(1,s.every||2)} 天 · ${tStr}`;
   if(s.type==='course') return `服${Math.max(1,s.onDays||7)}天停${Math.max(1,s.offDays||3)}天 · ${tStr}`;
-  return `每天 ${times.length} 次 · ${tStr}`;
+  return `每天 ${freq}${tStr}`;
 }
 
 // ─── SCHEDULE UI ──────────────────────────────────────────────────────────────
@@ -755,7 +758,12 @@ function switchTab(tab,el){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   el.classList.add('active');
   if(tab==='today')renderToday();
-  if(tab==='calendar'){renderCalFilter();renderCal();}
+  if(tab==='calendar'){
+    // Default to today selected
+    if(!selDay) selDay=getTodayStr();
+    renderCalFilter();renderCal();
+    showDetail(selDay);
+  }
   if(tab==='meds')renderMeds();
   if(tab==='profile')renderProfile();
 }
@@ -766,11 +774,13 @@ function renderToday(){
   const days=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
   document.getElementById('todaySub').textContent=`${now.getMonth()+1}月${now.getDate()}日 · ${days[now.getDay()]}`;
   const list=document.getElementById('todayList'); list.innerHTML='';
-  const doses=[]; meds.forEach(m=>{
+  const doses=[], noTimeMeds=[];
+  meds.forEach(m=>{
     if(!isScheduledForDate(m,todayStr))return;
-    (m.times||[]).forEach(t=>doses.push({m,t}));
+    if(!m.times||!m.times.length){ noTimeMeds.push(m); return; }
+    (m.times).forEach(t=>doses.push({m,t}));
   });
-  if(!doses.length){
+  if(!doses.length&&!noTimeMeds.length){
     const hasMeds=meds.length>0;
     list.innerHTML=`<div class="empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="color:var(--line2);margin-bottom:16px"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 002 8.5c0 2.3 1.5 4.05 3 5.5l7 7 7-7z"/></svg><p>${hasMeds?'今天不需要服药':'还没有添加药物<br>前往「药物」页面开始添加'}</p></div>`;
     updateArc(0,0);return;
@@ -793,6 +803,16 @@ function renderToday(){
     });
   });
   updateArc(taken,doses.length);
+
+  // Meds with no reminder time shown at bottom
+  if(noTimeMeds.length){
+    const sep=document.createElement('div');sep.className='time-sep';sep.textContent='无提醒时间';list.appendChild(sep);
+    noTimeMeds.forEach(med=>{
+      const card=document.createElement('div');card.className='med-card';
+      card.innerHTML=`${pillHtml(med)}<div class="med-info"><div class="med-name">${med.name}</div><div class="med-time" style="color:var(--muted)">按需服用</div></div>`;
+      list.appendChild(card);
+    });
+  }
 }
 
 async function toggleDose(medId,time,key,todayStr){
@@ -825,7 +845,13 @@ function renderCalFilter(){
   });
   wrap.innerHTML=html;
 }
-function setFilter(id){filterMedId=id;selDay=null;document.getElementById('calDetail').innerHTML='';renderCalFilter();renderCal();}
+function setFilter(id){
+  filterMedId=id;
+  if(!selDay) selDay=getTodayStr();
+  document.getElementById('calDetail').innerHTML='';
+  renderCalFilter();renderCal();
+  showDetail(selDay);
+}
 
 function renderCal(){
   const todayStr=getTodayStr();
@@ -833,6 +859,13 @@ function renderCal(){
   document.getElementById('calLabel').textContent=`${calY} 年 ${calM+1} 月`;
   const firstDay=new Date(calY,calM,1).getDay(),days=new Date(calY,calM+1,0).getDate();
   const c=document.getElementById('calDays');c.innerHTML='';
+
+  // Get active med color for themed display
+  const activeMed=filterMedId?meds.find(m=>m.id===filterMedId):null;
+  const themeColor=activeMed?activeMed.color:'var(--accent)';
+  const themeBg=activeMed?activeMed.color+'22':'var(--accent-bg)';
+  const themeLight=activeMed?activeMed.color+'99':'var(--accent-light)';
+
   for(let i=0;i<firstDay;i++){const e=document.createElement('div');e.className='cal-day empty';c.appendChild(e);}
   for(let d=1;d<=days;d++){
     const dstr=`${calY}-${p(calM+1)}-${p(d)}`,isToday=dstr===todayStr,isFuture=dstr>todayStr;
@@ -849,14 +882,14 @@ function renderCal(){
     const R=13,cx=14,cy=14;
     let bgFill='none',bgStroke='var(--line2)',bgStrokeW=1.5,piePath='',numColor='var(--text)',numWeight=500;
     if(!isFuture&&total>0){
-      if(isComplete){bgFill='var(--accent)';bgStroke='none';bgStrokeW=0;numColor='#fff';numWeight=700;}
+      if(isComplete){bgFill=themeColor;bgStroke='none';bgStrokeW=0;numColor='#fff';numWeight=700;}
       else if(taken>0){
-        bgFill='var(--accent-bg)';bgStroke='var(--accent-light)';bgStrokeW=1;
+        bgFill=themeBg;bgStroke=themeLight;bgStrokeW=1;
         const angle=pct*2*Math.PI,x1=cx+R*Math.sin(0),y1=cy-R*Math.cos(0),x2=cx+R*Math.sin(angle),y2=cy-R*Math.cos(angle),largeArc=angle>Math.PI?1:0;
-        piePath=`<path d="M${cx},${cy} L${x1},${y1} A${R},${R} 0 ${largeArc},1 ${x2},${y2} Z" fill="var(--accent-light)" opacity="0.85"/>`;
+        piePath=`<path d="M${cx},${cy} L${x1},${y1} A${R},${R} 0 ${largeArc},1 ${x2},${y2} Z" fill="${themeLight}" opacity="0.85"/>`;
       }
     }
-    if(isToday&&!isComplete){bgStroke='var(--accent)';bgStrokeW=2;numColor='var(--accent)';numWeight=700;}
+    if(isToday&&!isComplete){bgStroke=themeColor;bgStrokeW=2;numColor=themeColor;numWeight=700;}
     else if(isToday&&isComplete){numWeight=700;}
     const svgBg=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="${bgFill}" stroke="${bgStroke}" stroke-width="${bgStrokeW}"/>`;
     cell.innerHTML=`<div class="day-pie-wrap"><svg width="28" height="28" viewBox="0 0 28 28" style="position:absolute;inset:0">${svgBg}${piePath}</svg><span class="day-num" style="color:${numColor};font-weight:${numWeight};position:relative;z-index:1">${d}</span></div>`;
@@ -879,17 +912,29 @@ function showDetail(dstr){
   const activeMeds=filterMedId?meds.filter(m=>m.id===filterMedId):meds;
   const doses=[]; activeMeds.forEach(m=>{
     if(!isScheduledForDate(m,dstr))return;
-    (m.times||[]).forEach(t=>doses.push({m,t}));
+    if(!m.times||!m.times.length){
+      // No-time meds shown without a time key
+      doses.push({m,t:null});
+      return;
+    }
+    (m.times).forEach(t=>doses.push({m,t}));
   });
   doses.sort((a,b)=>{
+    if(a.t===null&&b.t!==null) return 1;
+    if(a.t!==null&&b.t===null) return -1;
+    if(a.t===null&&b.t===null) return 0;
     const ak=!!rec[`${a.m.id}_${a.t}`],bk=!!rec[`${b.m.id}_${b.t}`];
     if(ak!==bk)return ak?1:-1;return a.t.localeCompare(b.t);
   });
   if(!doses.length){document.getElementById('calDetail').innerHTML='';return;}
-  const takenCount=doses.filter(({m,t})=>!!rec[`${m.id}_${t}`]).length;
-  const sc=takenCount===doses.length?'var(--accent)':takenCount===0?'var(--danger)':'var(--warn)';
-  const st=takenCount===doses.length?'全部完成':`${takenCount} / ${doses.length}`;
+  const takenCount=doses.filter(({m,t})=>t!==null&&!!rec[`${m.id}_${t}`]).length;
+  const totalWithTime=doses.filter(({t})=>t!==null).length;
+  const sc=takenCount===totalWithTime&&totalWithTime>0?'var(--accent)':takenCount===0?'var(--danger)':'var(--warn)';
+  const st=totalWithTime===0?'无提醒时间':takenCount===totalWithTime?'全部完成':`${takenCount} / ${totalWithTime}`;
   const rows=doses.map(({m,t})=>{
+    if(t===null){
+      return `<div class="detail-row"><div class="detail-bar" style="background:${m.color}"></div><div class="detail-name">${m.name}</div><div class="detail-time" style="color:var(--muted)">无提醒</div><div class="badge na">按需</div></div>`;
+    }
     const taken=!!rec[`${m.id}_${t}`];
     const isPast=!isFuture&&dstr!==todayStr;
     const bc=isFuture?'na':taken?'ok':'no',bt=isFuture?'待服':taken?'已服':'未服';
@@ -903,9 +948,17 @@ function showDetail(dstr){
 
 async function changeMonth(dir){
   calM+=dir;if(calM<0){calM=11;calY--;}if(calM>11){calM=0;calY++;}
-  selDay=null;document.getElementById('calDetail').innerHTML='';
+  // Reset selDay; if navigating to current month restore today
+  const now=getNow();
+  if(calY===now.getFullYear()&&calM===now.getMonth()){
+    selDay=getTodayStr();
+  } else {
+    selDay=null;
+  }
+  document.getElementById('calDetail').innerHTML='';
   await loadRecordsForMonth(calY,calM);
   renderCal();
+  if(selDay) showDetail(selDay);
 }
 
 async function loadRecordsForMonth(y,m){
@@ -938,7 +991,7 @@ function openAdd(){
   document.getElementById('nameInput').value='';
   document.getElementById('modalTitle').textContent='添加药物';
   document.getElementById('delBtn').style.display='none';
-  initSwatches();initTimes(['08:00']);initScheduleUI({type:'every_day'});
+  initSwatches();initTimes([]);initScheduleUI({type:'every_day'});
   document.getElementById('modal').classList.add('open');
 }
 function openEdit(id){
@@ -974,7 +1027,6 @@ async function saveMed(){
   const name=document.getElementById('nameInput').value.trim();
   if(!name){toast('请输入药物名称');return;}
   const times=[...new Set([...document.querySelectorAll('.time-input')].map(i=>i.value).filter(Boolean))];
-  if(!times.length){toast('请至少设置一个提醒时间');return;}
   const schedule=readSchedule();
   const id=editId||(crypto.randomUUID?crypto.randomUUID():Date.now().toString());
   const med={id,name,color:selColor,times,schedule};
@@ -1037,7 +1089,8 @@ async function doRegister(){
       return;
     }
     currentUser=data.user;
-    await sb.from('profiles').upsert({id:data.user.id,name,email});
+    try{ await sb.from('profiles').upsert({id:data.user.id,name,email}); }
+    catch(e){ console.error('profiles upsert failed',e); }
     hide('registerScreen');
     startGestureSetup();
   }
@@ -1293,7 +1346,7 @@ function onLoginDraw(path){
     if(_loginAttempts>=5){
       document.getElementById('loginHint').textContent='尝试次数过多，请用密码登录';
       document.getElementById('loginHint').className='gesture-hint err';
-      setTimeout(()=>showPasswordLogin(true),1200);
+      setTimeout(()=>showPasswordLoginForgot(),1200);
     } else {
       document.getElementById('loginHint').textContent=`手势错误，还有 ${5-_loginAttempts} 次机会`;
       document.getElementById('loginHint').className='gesture-hint err';
@@ -1415,9 +1468,7 @@ async function doSignOut(){
 
 let _lastDateStr=getTodayStr();
 function tick(){
-  const now=getNow();
-  document.getElementById('statusTime').textContent=`${now.getHours()}:${p(now.getMinutes())}`;
-  const nowStr=ds(now);
+  const nowStr=getTodayStr();
   if(nowStr!==_lastDateStr){
     _lastDateStr=nowStr;
     if(document.getElementById('page-today').classList.contains('active'))renderToday();
@@ -1452,9 +1503,15 @@ async function loadAndStart(){
   }catch(e){
     console.error('loadAndStart failed',e);
     toast('数据加载失败，请刷新重试');
-  }finally{
     hideSync();
+    document.getElementById('loadingScreen').style.display='none';
+    // Still show app — user can use it, data will be empty
+    show('mainApp');
+    renderProfile();
+    renderToday();
+    return;
   }
+  hideSync();
   document.getElementById('loadingScreen').style.display='none';
   show('mainApp');
   renderProfile();
