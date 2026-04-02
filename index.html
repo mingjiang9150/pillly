@@ -505,6 +505,64 @@ function toast(msg){
 }
 function showSync(){document.getElementById('syncIndicator').innerHTML='<span class="sync-dot"></span>';}
 function hideSync(){document.getElementById('syncIndicator').innerHTML='';}
+function addDays(d,days){
+  const x=new Date(d);
+  x.setDate(x.getDate()+days);
+  return x;
+}
+function parseLocalDateOnly(dateStr){
+  const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr||'');
+  if(!m) return null;
+  return new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));
+}
+function countLifetimeTaken(medId){
+  let total=0;
+  const prefix=`${medId}_`;
+  Object.values(records||{}).forEach(dayRec=>{
+    if(!dayRec||typeof dayRec!=='object') return;
+    Object.entries(dayRec).forEach(([k,v])=>{
+      if(v===true && k.startsWith(prefix)) total++;
+    });
+  });
+  return total;
+}
+function countCourseTakenDaysInCurrentCycle(med){
+  const s=med?.schedule||{};
+  if(s.type!=='course' || !s.startDate) return null;
+  if(s.onDays===undefined||s.onDays===null||s.offDays===undefined||s.offDays===null) return null;
+  const onDays=Math.floor(Number(s.onDays));
+  const offDays=Math.floor(Number(s.offDays));
+  if(!Number.isFinite(onDays)||!Number.isFinite(offDays)||onDays<=0||offDays<=0) return null;
+  const cycleLen=onDays+offDays;
+  if(!cycleLen) return null;
+
+  const startLocal=parseLocalDateOnly(s.startDate);
+  if(!startLocal||Number.isNaN(startLocal.getTime())) return null;
+  const todayLocal=parseLocalDateOnly(getTodayStr());
+  if(!todayLocal||Number.isNaN(todayLocal.getTime())) return null;
+  const diffDays=Math.floor((todayLocal-startLocal)/(1000*60*60*24));
+  if(diffDays<0) return 0;
+
+  const cycleIndex=Math.floor(diffDays/cycleLen);
+  const cycleStart=addDays(startLocal,cycleIndex*cycleLen);
+  let takenDays=0;
+  const prefix=`${med.id}_`;
+  for(let i=0;i<cycleLen;i++){
+    const dstr=ds(addDays(cycleStart,i));
+    const dayRec=records[dstr]||{};
+    const hadTaken=Object.entries(dayRec).some(([k,v])=>v===true&&k.startsWith(prefix));
+    if(hadTaken) takenDays++;
+  }
+  return takenDays;
+}
+function medCountLabel(med){
+  const s=med.schedule||{type:'every_day'};
+  if(s.type==='course'){
+    const daysInCycle=countCourseTakenDaysInCurrentCycle(med);
+    if(daysInCycle!==null) return `本周期已服 ${daysInCycle} 天`;
+  }
+  return `累计已服 ${countLifetimeTaken(med.id)} 次`;
+}
 
 // ─── SCHEDULE HELPERS ─────────────────────────────────────────────────────────
 const WD_LABELS=['日','一','二','三','四','五','六'];
@@ -681,6 +739,7 @@ function renderToday(){
   }
   const rec=records[todayStr]||{}; let taken=0;
   const byTime={}; doses.forEach(({m,t})=>{(byTime[t]=byTime[t]||[]).push(m);});
+  const countLabelCache={};
   const timeKeys=Object.keys(byTime).sort();
   timeKeys.forEach(time=>{
     const ms=[...byTime[time]].sort((a,b)=>{
@@ -690,8 +749,9 @@ function renderToday(){
     const sep=document.createElement('div');sep.className='time-sep';sep.textContent=time;list.appendChild(sep);
     ms.forEach(med=>{
       const key=`${med.id}_${time}`,isTaken=!!rec[key];if(isTaken)taken++;
+      if(!countLabelCache[med.id]) countLabelCache[med.id]=medCountLabel(med);
       const card=document.createElement('div');card.className='med-card'+(isTaken?' taken':'');
-      card.innerHTML=`${pillHtml(med)}<div class="med-info"><div class="med-name">${med.name}</div><div class="med-time">${time}</div></div><div class="check-ring"><svg class="check-icon" width="12" height="9" viewBox="0 0 12 9" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1,4.5 4.5,8 11,1"/></svg></div>`;
+      card.innerHTML=`${pillHtml(med)}<div class="med-info"><div class="med-name">${med.name}</div><div class="med-time">${time}</div><div class="med-time" style="font-size:11px">${countLabelCache[med.id]}</div></div><div class="check-ring"><svg class="check-icon" width="12" height="9" viewBox="0 0 12 9" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1,4.5 4.5,8 11,1"/></svg></div>`;
       card.addEventListener('click',()=>toggleDose(med.id,time,key,todayStr));
       list.appendChild(card);
     });
@@ -702,8 +762,9 @@ function renderToday(){
   if(noTimeMeds.length){
     const sep=document.createElement('div');sep.className='time-sep';sep.textContent='无提醒时间';list.appendChild(sep);
     noTimeMeds.forEach(med=>{
+      if(!countLabelCache[med.id]) countLabelCache[med.id]=medCountLabel(med);
       const card=document.createElement('div');card.className='med-card';
-      card.innerHTML=`${pillHtml(med)}<div class="med-info"><div class="med-name">${med.name}</div><div class="med-time" style="color:var(--muted)">按需服用</div></div>`;
+      card.innerHTML=`${pillHtml(med)}<div class="med-info"><div class="med-name">${med.name}</div><div class="med-time" style="color:var(--muted)">按需服用</div><div class="med-time" style="font-size:11px">${countLabelCache[med.id]}</div></div>`;
       list.appendChild(card);
     });
   }
