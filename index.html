@@ -11,7 +11,6 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --bg:#F5F3EF; --card:#FDFCFB; --card2:#EEEBE6;
@@ -38,20 +37,19 @@ body{
 .loading-dot{width:8px;height:8px;background:var(--accent-light);border-radius:50%;animation:pulse 1.2s ease-in-out infinite;}
 @keyframes pulse{0%,100%{opacity:0.3;transform:scale(0.8)}50%{opacity:1;transform:scale(1.1)}}
 
-/* AUTH SCREENS */
-.auth-screen{
+/* LOGIN SCREEN (no register) */
+.login-screen{
   position:fixed;inset:0;background:var(--bg);z-index:998;
   display:flex;flex-direction:column;align-items:center;
   padding:calc(env(safe-area-inset-top) + 60px) 28px 40px;
   overflow-y:auto;
 }
-.auth-logo{font-size:36px;font-weight:700;color:var(--accent);letter-spacing:-1px;margin-bottom:4px;}
-.auth-logo::after{content:'';display:inline-block;width:8px;height:8px;background:var(--accent-light);border-radius:50%;margin-left:2px;vertical-align:middle;margin-bottom:5px;}
-.auth-sub{font-size:14px;color:var(--muted);margin-bottom:36px;}
-.auth-card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px;width:100%;max-width:360px;box-shadow:var(--shadow);}
-.auth-title{font-size:17px;font-weight:700;color:var(--text);margin-bottom:20px;text-align:center;}
-.auth-note{font-size:12px;color:var(--muted);text-align:center;margin-top:14px;line-height:1.6;}
-.auth-link{font-size:13px;color:var(--accent);text-align:center;margin-top:10px;cursor:pointer;font-weight:600;}
+.login-logo{font-size:36px;font-weight:700;color:var(--accent);letter-spacing:-1px;margin-bottom:4px;}
+.login-logo::after{content:'';display:inline-block;width:8px;height:8px;background:var(--accent-light);border-radius:50%;margin-left:2px;vertical-align:middle;margin-bottom:5px;}
+.login-sub{font-size:14px;color:var(--muted);margin-bottom:36px;}
+.login-card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px;width:100%;max-width:360px;box-shadow:var(--shadow);}
+.login-title{font-size:17px;font-weight:700;color:var(--text);margin-bottom:20px;text-align:center;}
+.login-link{font-size:13px;color:var(--accent);text-align:center;margin-top:10px;cursor:pointer;font-weight:600;}
 
 /* PROFILE PAGE */
 .profile-header{
@@ -75,45 +73,6 @@ body{
 .action-label{flex:1;font-size:15px;font-weight:500;color:var(--text);}
 .action-arrow{color:var(--line2);font-size:18px;}
 .action-label.danger{color:var(--danger);}
-
-
-.gesture-screen{
-  position:fixed;inset:0;background:var(--bg);z-index:998;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:40px 28px calc(env(safe-area-inset-bottom)+40px);
-}
-.gesture-logo{font-size:28px;font-weight:700;color:var(--accent);letter-spacing:-1px;margin-bottom:6px;}
-.gesture-logo::after{content:'';display:inline-block;width:6px;height:6px;background:var(--accent-light);border-radius:50%;margin-left:2px;vertical-align:middle;margin-bottom:4px;}
-.gesture-hint{font-size:14px;color:var(--muted);margin-bottom:40px;text-align:center;min-height:20px;}
-.gesture-hint.err{color:var(--danger);}
-.gesture-hint.ok{color:var(--accent);}
-.gesture-grid{
-  position:relative;
-  width:260px;height:260px;
-  display:grid;grid-template-columns:repeat(3,1fr);gap:0;
-  touch-action:none;user-select:none;
-}
-.gesture-dot{
-  display:flex;align-items:center;justify-content:center;
-  cursor:pointer;
-}
-.gesture-dot-inner{
-  width:18px;height:18px;border-radius:50%;
-  border:2px solid var(--line2);background:var(--card);
-  transition:all 0.15s;position:relative;z-index:1;
-}
-.gesture-dot.active .gesture-dot-inner{
-  border-color:var(--accent);background:var(--accent);
-  transform:scale(1.2);
-}
-.gesture-dot.err .gesture-dot-inner{
-  border-color:var(--danger);background:var(--danger);
-}
-.gesture-svg{position:absolute;inset:0;pointer-events:none;overflow:visible;}
-.gesture-line{stroke:var(--accent);stroke-width:2.5;stroke-linecap:round;opacity:0.6;}
-.gesture-line.err{stroke:var(--danger);}
-.gesture-actions{margin-top:36px;display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;max-width:260px;}
-.gesture-alt-btn{font-size:13px;color:var(--accent);font-weight:600;cursor:pointer;padding:8px;}
 
 .status{
   display:flex;justify-content:flex-end;align-items:center;
@@ -286,70 +245,26 @@ body{
 .toast{position:fixed;top:64px;left:50%;transform:translateX(-50%) translateY(-16px);background:var(--text);color:#fff;padding:10px 20px;border-radius:24px;font-size:13px;font-weight:500;z-index:400;opacity:0;transition:all 0.3s;white-space:nowrap;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-<!-- REGISTER SCREEN -->
-<div id="registerScreen" style="display:none" class="auth-screen">
-  <div class="auth-logo">Pillly</div>
-  <div class="auth-sub">你的每日服药助手</div>
-  <div class="auth-card">
-    <div class="auth-title">创建账号</div>
-    <div class="field">
-      <label class="field-label">用户名</label>
-      <input class="field-input" id="regName" placeholder="设置你的用户名" type="text" autocomplete="username">
-    </div>
+<!-- LOGIN (NO REGISTER) -->
+<div id="loginScreen" style="display:none" class="login-screen">
+  <div class="login-logo">Pillly</div>
+  <div class="login-sub">你的每日服药助手</div>
+  <div class="login-card">
+    <div class="login-title">登录</div>
     <div class="field">
       <label class="field-label">邮箱</label>
-      <input class="field-input" id="regEmail" placeholder="用于找回密码" type="email" autocomplete="email">
-    </div>
-    <div class="field">
-      <label class="field-label">密码</label>
-      <input class="field-input" id="regPassword" placeholder="6位以上" type="password" autocomplete="new-password">
-    </div>
-    <button class="btn btn-accent" onclick="doRegister()">注册</button>
-    <div class="auth-link" onclick="showPasswordLogin()">已有账号？密码登录</div>
-  </div>
-</div>
-
-<!-- PASSWORD LOGIN SCREEN -->
-<div id="passwordLoginScreen" style="display:none" class="auth-screen">
-  <div class="auth-logo">Pillly</div>
-  <div class="auth-sub">你的每日服药助手</div>
-  <div class="auth-card">
-    <div class="auth-title" id="pwLoginTitle">密码登录</div>
-    <div class="field">
-      <label class="field-label">邮箱</label>
-      <input class="field-input" id="loginEmail" placeholder="注册时使用的邮箱" type="email" autocomplete="email">
+      <input class="field-input" id="loginEmail" placeholder="你的邮箱" type="email" autocomplete="email">
     </div>
     <div class="field">
       <label class="field-label">密码</label>
       <input class="field-input" id="loginPassword" placeholder="你的密码" type="password" autocomplete="current-password">
     </div>
-    <button class="btn btn-accent" id="pwLoginBtn" onclick="doPasswordLogin(false)">登录</button>
-    <div class="auth-link" onclick="doForgotPassword()">忘记密码？发送重置邮件</div>
-    <div class="auth-link" onclick="showRegister()">没有账号？注册</div>
-  </div>
-</div>
-
-<!-- GESTURE SETUP SCREEN -->
-<div id="gestureSetupScreen" style="display:none" class="gesture-screen">
-  <div class="gesture-logo">Pillly</div>
-  <div class="gesture-hint" id="setupHint">设置手势密码</div>
-  <div class="gesture-grid" id="setupGrid"></div>
-  <div class="gesture-actions">
-    <div class="gesture-alt-btn" onclick="resetGestureSetup()">重新绘制</div>
-    <div class="gesture-alt-btn" id="skipGestureBtn" onclick="skipGesture()">跳过，直接进入</div>
-  </div>
-</div>
-
-<!-- GESTURE LOGIN SCREEN -->
-<div id="gestureLoginScreen" style="display:none" class="gesture-screen">
-  <div class="gesture-logo">Pillly</div>
-  <div class="gesture-hint" id="loginHint">请绘制手势密码</div>
-  <div class="gesture-grid" id="loginGrid"></div>
-  <div class="gesture-actions">
-    <div class="gesture-alt-btn" onclick="showPasswordLoginForgot()">忘记手势？用密码登录</div>
+    <button class="btn btn-accent" id="loginBtn" onclick="doPasswordLogin()">登录</button>
+    <div class="login-link" onclick="doForgotPassword()">忘记密码？发送重置邮件</div>
   </div>
 </div>
 
@@ -434,27 +349,6 @@ body{
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       </div>
       <div class="action-label">修改用户名</div>
-      <div class="action-arrow">›</div>
-    </div>
-    <div class="action-row" onclick="openProfileEdit('email')">
-      <div class="action-icon" style="background:var(--accent-bg)">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-      </div>
-      <div class="action-label">修改邮箱</div>
-      <div class="action-arrow">›</div>
-    </div>
-    <div class="action-row" onclick="openProfileEdit('password')">
-      <div class="action-icon" style="background:var(--accent-bg)">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-      </div>
-      <div class="action-label">修改密码</div>
-      <div class="action-arrow">›</div>
-    </div>
-    <div class="action-row" onclick="resetGestureFromProfile()">
-      <div class="action-icon" style="background:var(--accent-bg)">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2v-4M9 21H5a2 2 0 01-2-2v-4m0 0h18"/></svg>
-      </div>
-      <div class="action-label">重新设置手势密码</div>
       <div class="action-arrow">›</div>
     </div>
   </div>
@@ -730,7 +624,7 @@ async function confirmRetro(){
 
 // ─── SYNC ─────────────────────────────────────────────────────────────────────
 async function syncRecord(medId,time,date,taken){
-  if(!currentUser)return;
+  if(!currentUser) return;
   showSync();
   try{
     await sb.from('medication_records').upsert(
@@ -740,7 +634,7 @@ async function syncRecord(medId,time,date,taken){
   }finally{ hideSync(); }
 }
 async function syncMed(med,isDelete=false){
-  if(!currentUser)return;
+  if(!currentUser) return;
   showSync();
   try{
     if(isDelete){
@@ -962,7 +856,7 @@ async function changeMonth(dir){
 }
 
 async function loadRecordsForMonth(y,m){
-  if(!currentUser)return;
+  if(!currentUser) return;
   const fromDate=`${y}-${p(m+1)}-01`;
   const toDate=`${y}-${p(m+1)}-${new Date(y,m+1,0).getDate()}`;
   try{
@@ -1046,346 +940,77 @@ async function deleteMed(){
   if(med){ try{ await syncMed(med,true); }catch(e){ console.error('deleteMed sync failed',e); } }
 }
 
-// ─── AUTH ─────────────────────────────────────────────────────────────────────
-const GESTURE_KEY='pillly_gesture'; // stored in localStorage (hashed)
-
-function showRegister(){
-  hide('passwordLoginScreen');hide('gestureLoginScreen');hide('gestureSetupScreen');
-  show('registerScreen');
+function show(id){document.getElementById(id).style.display=(id==='mainApp')?'block':'flex';}
+function hide(id){document.getElementById(id).style.display='none';}
+function showLogin(){
+  hide('loadingScreen');
+  hide('mainApp');
+  show('loginScreen');
+  setTimeout(()=>document.getElementById('loginEmail')?.focus(),200);
 }
-function showPasswordLogin(){
-  hide('registerScreen');hide('gestureLoginScreen');hide('gestureSetupScreen');
-  // Reset attempts when showing password login normally
-  _loginAttempts=0;
-  // Update button to normal login (not forgot-gesture)
-  document.getElementById('pwLoginBtn').onclick=()=>doPasswordLogin(false);
-  show('passwordLoginScreen');
-}
-function showPasswordLoginForgot(){
-  hide('registerScreen');hide('gestureLoginScreen');hide('gestureSetupScreen');
-  _loginAttempts=0;
-  // Update button to clear-gesture login
-  document.getElementById('pwLoginBtn').onclick=()=>doPasswordLogin(true);
-  show('passwordLoginScreen');
+function showApp(){
+  hide('loginScreen');
+  show('mainApp');
 }
 
-async function doRegister(){
-  const name=document.getElementById('regName').value.trim();
-  const email=document.getElementById('regEmail').value.trim();
-  const password=document.getElementById('regPassword').value;
-  if(!name){toast('请输入用户名');return;}
-  if(name.length<2){toast('用户名至少2个字符');return;}
+async function doPasswordLogin(){
+  const email=document.getElementById('loginEmail')?.value?.trim()||'';
+  const password=document.getElementById('loginPassword')?.value||'';
   if(!email||!email.includes('@')){toast('请输入有效邮箱');return;}
-  if(!password||password.length<6){toast('密码至少6位');return;}
-  toast('正在注册...');
-  const {data,error}=await sb.auth.signUp({email,password,options:{data:{name}}});
-  if(error){toast('注册失败：'+error.message);return;}
-  if(data.user){
-    // Check if email confirmation is required
-    if(!data.session){
-      // Email confirmation required
-      toast('注册成功！请查收邮件并点击确认链接后再登录 ✓');
-      setTimeout(()=>showPasswordLogin(),2500);
-      return;
-    }
-    currentUser=data.user;
-    try{ await sb.from('profiles').upsert({id:data.user.id,name,email}); }
-    catch(e){ console.error('profiles upsert failed',e); }
-    hide('registerScreen');
-    startGestureSetup();
-  }
-}
-
-async function doPasswordLogin(clearGesture=false){
-  const email=document.getElementById('loginEmail').value.trim();
-  const password=document.getElementById('loginPassword').value;
-  if(!email){toast('请输入邮箱');return;}
   if(!password){toast('请输入密码');return;}
   toast('正在登录...');
-  const {data,error}=await sb.auth.signInWithPassword({email,password});
-  if(error){toast('登录失败：'+error.message);return;}
-  currentUser=data.user;
-  hide('passwordLoginScreen');
-  if(clearGesture){
-    // Coming from forgot-gesture — clear and reset
-    localStorage.removeItem(GESTURE_KEY);
-    startGestureSetup();
-  } else {
-    // Normal password login — respect existing gesture
-    const hasGesture=!!localStorage.getItem(GESTURE_KEY);
-    if(hasGesture){
-      startGestureLogin();
-    } else {
-      startGestureSetup();
-    }
+  try{
+    const {data,error}=await sb.auth.signInWithPassword({email,password});
+    if(error){toast('登录失败：'+error.message);return;}
+    currentUser=data.user;
+    hide('loginScreen');
+    await loadAndStart();
+  }catch(e){
+    console.error('doPasswordLogin failed',e);
+    toast('登录失败，请稍后重试');
   }
 }
-
 async function doForgotPassword(){
-  const email=document.getElementById('loginEmail').value.trim();
-  if(!email||!email.includes('@')){toast('请先输入邮箱');return;}
-  const {error}=await sb.auth.resetPasswordForEmail(email);
-  if(error){toast('发送失败：'+error.message);}
-  else{toast('重置邮件已发送，请查收 ✓');}
-}
-
-// ─── GESTURE ENGINE ───────────────────────────────────────────────────────────
-// DOT POSITIONS: 0-8, row-major
-// 0 1 2
-// 3 4 5
-// 6 7 8
-const DOT_POS=[ // center x,y as fraction of 260px grid
-  [43,43],[130,43],[217,43],
-  [43,130],[130,130],[217,130],
-  [43,217],[130,217],[217,217]
-];
-
-function buildGrid(containerId, onComplete){
-  const grid=document.getElementById(containerId);
-  // Clone to remove all previous event listeners
-  const fresh=grid.cloneNode(false);
-  grid.parentNode.replaceChild(fresh,grid);
-  const g=document.getElementById(containerId);
-
-  // SVG layer for lines
-  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
-  svg.setAttribute('class','gesture-svg');
-  svg.setAttribute('viewBox','0 0 260 260');
-  g.appendChild(svg);
-
-  // 9 dots
-  const dots=[];
-  for(let i=0;i<9;i++){
-    const cell=document.createElement('div');
-    cell.className='gesture-dot';
-    cell.dataset.idx=i;
-    const inner=document.createElement('div');
-    inner.className='gesture-dot-inner';
-    cell.appendChild(inner);
-    g.appendChild(cell);
-    dots.push(cell);
-  }
-
-  let path=[], drawing=false, curLine=null;
-
-  function dotCenter(i){
-    const rect=g.getBoundingClientRect();
-    const scaleX=rect.width/260, scaleY=rect.height/260;
-    return [DOT_POS[i][0]*scaleX, DOT_POS[i][1]*scaleY];
-  }
-  function svgPoint(clientX,clientY){
-    const rect=g.getBoundingClientRect();
-    return [clientX-rect.left, clientY-rect.top];
-  }
-  function hitTest(x,y){
-    const rect=g.getBoundingClientRect();
-    const scaleX=rect.width/260, scaleY=rect.height/260;
-    for(let i=0;i<9;i++){
-      const cx=DOT_POS[i][0]*scaleX, cy=DOT_POS[i][1]*scaleY;
-      if(Math.hypot(x-cx,y-cy)<22 && !path.includes(i)) return i;
-    }
-    return -1;
-  }
-  function addDot(i){
-    path.push(i);
-    dots[i].classList.add('active');
-    if(path.length>1){
-      const prev=path[path.length-2];
-      const [x1,y1]=dotCenter(prev);
-      const [x2,y2]=dotCenter(i);
-      const line=document.createElementNS('http://www.w3.org/2000/svg','line');
-      line.setAttribute('class','gesture-line');
-      line.setAttribute('x1',x1);line.setAttribute('y1',y1);
-      line.setAttribute('x2',x2);line.setAttribute('y2',y2);
-      svg.appendChild(line);
-    }
-    if(curLine) svg.removeChild(curLine);
-    curLine=null;
-  }
-  function moveLine(x,y){
-    if(!path.length) return;
-    if(curLine) svg.removeChild(curLine);
-    const [x1,y1]=dotCenter(path[path.length-1]);
-    const line=document.createElementNS('http://www.w3.org/2000/svg','line');
-    line.setAttribute('class','gesture-line');
-    line.setAttribute('x1',x1);line.setAttribute('y1',y1);
-    line.setAttribute('x2',x);line.setAttribute('y2',y);
-    svg.appendChild(line);
-    curLine=line;
-  }
-  function endDraw(){
-    if(!drawing) return;
-    drawing=false;
-    if(curLine){svg.removeChild(curLine);curLine=null;}
-    const completed=[...path];
-    path=[];
-    if(completed.length>=4){
-      onComplete(completed);
-    } else {
-      flashError(dots,svg,()=>{dots.forEach(d=>d.classList.remove('active','err'));while(svg.firstChild)svg.removeChild(svg.firstChild);});
-    }
-  }
-  function flashError(dots,svg,cb){
-    dots.forEach(d=>{if(d.classList.contains('active')){d.classList.remove('active');d.classList.add('err');}});
-    svg.querySelectorAll('.gesture-line').forEach(l=>l.classList.add('err'));
-    setTimeout(cb,600);
-  }
-
-  g.addEventListener('touchstart',e=>{
-    e.preventDefault();
-    if(drawing) return;
-    drawing=true; path=[];
-    dots.forEach(d=>d.classList.remove('active','err'));
-    while(svg.firstChild)svg.removeChild(svg.firstChild);
-    const t=e.touches[0];
-    const [x,y]=svgPoint(t.clientX,t.clientY);
-    const hit=hitTest(x,y);
-    if(hit>=0) addDot(hit);
-  },{passive:false});
-  g.addEventListener('touchmove',e=>{
-    e.preventDefault();
-    if(!drawing) return;
-    const t=e.touches[0];
-    const [x,y]=svgPoint(t.clientX,t.clientY);
-    const hit=hitTest(x,y);
-    if(hit>=0) addDot(hit);
-    moveLine(x,y);
-  },{passive:false});
-  g.addEventListener('touchend',e=>{e.preventDefault();endDraw();},{passive:false});
-
-  // Mouse support for desktop testing
-  g.addEventListener('mousedown',e=>{
-    if(drawing) return;
-    drawing=true;path=[];
-    dots.forEach(d=>d.classList.remove('active','err'));
-    while(svg.firstChild)svg.removeChild(svg.firstChild);
-    const [x,y]=svgPoint(e.clientX,e.clientY);
-    const hit=hitTest(x,y);
-    if(hit>=0) addDot(hit);
-  });
-  g.addEventListener('mousemove',e=>{
-    if(!drawing) return;
-    const [x,y]=svgPoint(e.clientX,e.clientY);
-    const hit=hitTest(x,y);
-    if(hit>=0) addDot(hit);
-    moveLine(x,y);
-  });
-  g.addEventListener('mouseup',endDraw);
-  g.addEventListener('mouseleave',endDraw);
-}
-
-// Hash gesture path to string (simple but sufficient for local storage)
-function hashGesture(path){
-  return btoa(path.join(',')+'|pillly');
-}
-
-// ─── GESTURE SETUP ────────────────────────────────────────────────────────────
-let _setupFirstPath=null;
-function startGestureSetup(){
-  _setupFirstPath=null;
-  show('gestureSetupScreen');
-  document.getElementById('setupHint').textContent='设置手势密码';
-  document.getElementById('setupHint').className='gesture-hint';
-  buildGrid('setupGrid', onSetupDraw);
-}
-function onSetupDraw(path){
-  if(!_setupFirstPath){
-    _setupFirstPath=path;
-    document.getElementById('setupHint').textContent='再次绘制确认';
-    document.getElementById('setupHint').className='gesture-hint ok';
-    buildGrid('setupGrid', onSetupDraw);
-  } else {
-    if(path.join(',')===_setupFirstPath.join(',')){
-      localStorage.setItem(GESTURE_KEY, hashGesture(path));
-      hide('gestureSetupScreen');
-      document.getElementById('setupHint').className='gesture-hint';
-      loadAndStart();
-    } else {
-      _setupFirstPath=null;
-      document.getElementById('setupHint').textContent='两次手势不一致，请重新设置';
-      document.getElementById('setupHint').className='gesture-hint err';
-      buildGrid('setupGrid', onSetupDraw);
-    }
+  const email=document.getElementById('loginEmail')?.value?.trim()||'';
+  if(!email||!email.includes('@')){toast('请输入邮箱');return;}
+  try{
+    const {error}=await sb.auth.resetPasswordForEmail(email);
+    if(error){toast('发送失败：'+error.message);}
+    else{toast('重置邮件已发送，请查收 ✓');}
+  }catch(e){
+    console.error('doForgotPassword failed',e);
+    toast('发送失败，请稍后重试');
   }
 }
-function resetGestureSetup(){
-  _setupFirstPath=null;
-  document.getElementById('setupHint').textContent='设置手势密码';
-  document.getElementById('setupHint').className='gesture-hint';
-  buildGrid('setupGrid', onSetupDraw);
-}
-function skipGesture(){
-  _setupFirstPath=null;
-  hide('gestureSetupScreen');
-  loadAndStart();
-}
-
-// ─── GESTURE LOGIN ────────────────────────────────────────────────────────────
-let _loginAttempts=0;
-function startGestureLogin(){
-  _loginAttempts=0;
-  show('gestureLoginScreen');
-  document.getElementById('loginHint').textContent='请绘制手势密码';
-  document.getElementById('loginHint').className='gesture-hint';
-  buildGrid('loginGrid', onLoginDraw);
-}
-function onLoginDraw(path){
-  const stored=localStorage.getItem(GESTURE_KEY);
-  if(!stored){
-    // No gesture set, go straight in
-    hide('gestureLoginScreen');
-    loadAndStart();
-    return;
-  }
-  if(hashGesture(path)===stored){
-    _loginAttempts=0;
-    hide('gestureLoginScreen');
-    loadAndStart();
-  } else {
-    _loginAttempts++;
-    if(_loginAttempts>=5){
-      document.getElementById('loginHint').textContent='尝试次数过多，请用密码登录';
-      document.getElementById('loginHint').className='gesture-hint err';
-      setTimeout(()=>showPasswordLoginForgot(),1200);
-    } else {
-      document.getElementById('loginHint').textContent=`手势错误，还有 ${5-_loginAttempts} 次机会`;
-      document.getElementById('loginHint').className='gesture-hint err';
-      buildGrid('loginGrid', onLoginDraw);
-    }
-  }
-}
-
-function show(id){
-  const el=document.getElementById(id);
-  // mainApp is a block container, screens are flex
-  el.style.display=(id==='mainApp')?'block':'flex';
-}
-function hide(id){document.getElementById(id).style.display='none';}
 
 // ─── PROFILE ──────────────────────────────────────────────────────────────────
 let _profileEditType=null;
 
 function renderProfile(){
-  if(!currentUser) return;
+  const avatarEl=document.getElementById('profileAvatar');
+  const nameEl=document.getElementById('profileName');
+  const emailEl=document.getElementById('profileEmail');
+
+  if(!currentUser){
+    avatarEl.textContent='?';
+    nameEl.textContent='未登录';
+    emailEl.textContent='';
+    return;
+  }
   const name=currentUser.user_metadata?.name||'用户';
-  const email=currentUser.email||'';
-  document.getElementById('profileAvatar').textContent=initials(name);
-  document.getElementById('profileName').textContent=name;
-  document.getElementById('profileEmail').textContent=email;
+  avatarEl.textContent=initials(name);
+  nameEl.textContent=name;
+  emailEl.textContent=currentUser.email||'';
 }
 
 function openProfileEdit(type){
+  if(!currentUser){ toast('请先登录'); return; }
   _profileEditType=type;
-  const titles={name:'修改用户名',email:'修改邮箱',password:'修改密码'};
+  const titles={name:'修改用户名'};
   document.getElementById('profileEditTitle').textContent=titles[type];
   const field=document.getElementById('profileEditField');
-  if(type==='name'){
-    field.innerHTML=`<label class="field-label">新用户名</label><input class="field-input" id="peInput" type="text" placeholder="输入新用户名" value="${currentUser.user_metadata?.name||''}">`;
-  } else if(type==='email'){
-    field.innerHTML=`<label class="field-label">新邮箱</label><input class="field-input" id="peInput" type="email" placeholder="输入新邮箱"><p style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6">修改后需要在新邮箱中确认</p>`;
-  } else if(type==='password'){
-    field.innerHTML=`<label class="field-label">当前密码</label><input class="field-input" id="peOldPwd" type="password" placeholder="当前密码" style="margin-bottom:10px"><label class="field-label">新密码</label><input class="field-input" id="peInput" type="password" placeholder="新密码（6位以上）">`;
-  }
+  const curName=(currentUser.user_metadata?.name||'').toString().replace(/"/g,'&quot;');
+  field.innerHTML=`<label class="field-label">新用户名</label><input class="field-input" id="peInput" type="text" placeholder="输入新用户名" value="${curName}">`;
   document.getElementById('profileEditModal').classList.add('open');
   setTimeout(()=>document.getElementById('peInput')?.focus(),300);
 }
@@ -1396,73 +1021,27 @@ function closeProfileEdit(){
 }
 
 async function saveProfileEdit(){
-  const type=_profileEditType;
   const input=document.getElementById('peInput');
   if(!input){toast('请填写内容');return;}
-  const val=type==='password'?input.value:input.value.trim();
+  const val=input.value.trim();
   if(!val){toast('内容不能为空');return;}
-
-  if(type==='name'){
-    const {error}=await sb.auth.updateUser({data:{name:val}});
-    if(error){toast('修改失败：'+error.message);return;}
-    toast('用户名已更新 ✓');
-    closeProfileEdit();
-    renderProfile();
-
-  } else if(type==='email'){
-    if(!val.includes('@')){toast('请输入有效邮箱');return;}
-    const {error}=await sb.auth.updateUser({email:val});
-    if(error){toast('修改失败：'+error.message);return;}
-    toast('确认邮件已发送，请查收 ✓');
-    closeProfileEdit();
-
-  } else if(type==='password'){
-    if(val.length<6){toast('新密码至少6位');return;}
-    if(!confirm('确定修改密码？')){return;}
-    const {error}=await sb.auth.updateUser({password:val});
-    if(error){toast('修改失败：'+error.message);return;}
-    toast('密码已更新 ✓');
-    closeProfileEdit();
-  }
-}
-
-function resetGestureFromProfile(){
-  if(!confirm('确定重新设置手势密码？')) return;
-  localStorage.removeItem(GESTURE_KEY);
-  hide('mainApp');
-  _setupFirstPath=null;
-  show('gestureSetupScreen');
-  document.getElementById('setupHint').textContent='设置新手势密码';
-  document.getElementById('setupHint').className='gesture-hint';
-
-  function onFirstDraw(path){
-    _setupFirstPath=path;
-    document.getElementById('setupHint').textContent='再次绘制确认';
-    document.getElementById('setupHint').className='gesture-hint ok';
-    buildGrid('setupGrid', onSecondDraw);
-  }
-  function onSecondDraw(path2){
-    if(path2.join(',')===_setupFirstPath.join(',')){
-      localStorage.setItem(GESTURE_KEY, hashGesture(path2));
-      _setupFirstPath=null;
-      hide('gestureSetupScreen');
-      show('mainApp');
-      toast('手势密码已更新 ✓');
-    } else {
-      _setupFirstPath=null;
-      document.getElementById('setupHint').textContent='两次手势不一致，请重新设置';
-      document.getElementById('setupHint').className='gesture-hint err';
-      buildGrid('setupGrid', onFirstDraw);
-    }
-  }
-  buildGrid('setupGrid', onFirstDraw);
+  if(!currentUser){ toast('未登录'); return; }
+  const {error}=await sb.auth.updateUser({data:{name:val}});
+  if(error){toast('修改失败：'+error.message);return;}
+  toast('用户名已更新 ✓');
+  closeProfileEdit();
+  renderProfile();
 }
 
 async function doSignOut(){
   if(!confirm('确定退出登录？')) return;
-  localStorage.removeItem(GESTURE_KEY);
-  await sb.auth.signOut();
-  location.reload();
+  try{
+    await sb.auth.signOut();
+  }catch(e){
+    console.error('signOut failed',e);
+  }finally{
+    location.reload();
+  }
 }
 
 
@@ -1478,17 +1057,23 @@ setInterval(tick,10000);tick();
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
 async function loadAndStart(){
-  // Show loading while fetching data
-  hide('gestureSetupScreen');hide('gestureLoginScreen');
   show('loadingScreen');
   showSync();
+
+  if(!currentUser){
+    hideSync();
+    document.getElementById('loadingScreen').style.display='none';
+    showLogin();
+    return;
+  }
+
   try{
     // Load meds
     const {data:medsData,error:medsErr}=await sb.from('medications').select('*').eq('user_id',currentUser.id);
     if(medsErr)throw medsErr;
     meds=(medsData||[]).map(m=>({id:m.id,name:m.name,color:m.color,times:m.times,schedule:m.schedule||{type:'every_day'}}));
 
-    // Load records: current month + previous month (fix: use correct month indices)
+    // Load records: current month + previous month
     const now=getNow();
     const prevY=now.getMonth()===0?now.getFullYear()-1:now.getFullYear();
     const prevM=now.getMonth()===0?11:now.getMonth()-1;
@@ -1505,36 +1090,38 @@ async function loadAndStart(){
     toast('数据加载失败，请刷新重试');
     hideSync();
     document.getElementById('loadingScreen').style.display='none';
-    // Still show app — user can use it, data will be empty
     show('mainApp');
     renderProfile();
     renderToday();
     return;
   }
+
   hideSync();
   document.getElementById('loadingScreen').style.display='none';
-  show('mainApp');
+  showApp();
   renderProfile();
   renderToday();
 }
 
 (async()=>{
   const {data:{session}}=await sb.auth.getSession();
-  if(session?.user){
-    currentUser=session.user;
-    // Check if gesture is set
-    const hasGesture=!!localStorage.getItem(GESTURE_KEY);
-    hide('loadingScreen');
-    if(hasGesture){
-      startGestureLogin();
-    } else {
-      // Logged in but no gesture — go straight in (or offer to set up)
-      loadAndStart();
+  currentUser=session?.user||null;
+  hide('loadingScreen');
+  // Keep UI in sync even if token refreshes / signs out
+  sb.auth.onAuthStateChange((evt, nextSession)=>{
+    currentUser=nextSession?.user||null;
+    if(!currentUser){
+      showLogin();
+      return;
     }
-  } else {
-    hide('loadingScreen');
-    showRegister();
-  }
+    // If user just signed in (or session restored), load data once.
+    if(evt==='SIGNED_IN' && document.getElementById('mainApp')?.style?.display!=='block'){
+      loadAndStart();
+      return;
+    }
+    renderProfile();
+  });
+  loadAndStart();
 })();
 </script>
 </body>
