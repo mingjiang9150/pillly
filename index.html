@@ -10,6 +10,8 @@
 <meta name="theme-color" content="#F5F3EF">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://fszveofufddccfcndjiw.supabase.co">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -245,7 +247,6 @@ body{
 .toast{position:fixed;top:64px;left:50%;transform:translateX(-50%) translateY(-16px);background:var(--text);color:#fff;padding:10px 20px;border-radius:24px;font-size:13px;font-weight:500;z-index:400;opacity:0;transition:all 0.3s;white-space:nowrap;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -468,6 +469,7 @@ body{
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 const SUPABASE_URL='https://fszveofufddccfcndjiw.supabase.co';
@@ -939,7 +941,14 @@ function refreshCalIfVisible(){
 function renderMeds(){
   const c=document.getElementById('medsList');
   if(!meds.length){c.innerHTML=`<div class="empty-state"><p>点击右上角 <strong>+</strong> 添加第一种药物</p></div>`;return;}
-  c.innerHTML=`<div class="med-list">${meds.map(m=>`<div class="med-list-row" onclick="openEdit('${m.id}')">${pillHtml(m)}<div class="ml-info"><div class="ml-name">${m.name}</div><div class="ml-desc">${scheduleDesc(m)}</div></div><div class="ml-arrow">›</div></div>`).join('')}</div>`;
+  const list=`<div class="med-list">${meds.map(m=>`<div class="med-list-row" onclick="openEdit('${m.id}')">${pillHtml(m)}<div class="ml-info"><div class="ml-name">${m.name}</div><div class="ml-desc">${scheduleDesc(m)}</div></div><div class="ml-arrow">›</div></div>`).join('')}</div>`;
+  const exportBlock=`
+    <div style="margin-top:20px;padding:16px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);">
+      <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;">添加到系统日历</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:12px;">导出 <code style="font-family:inherit;background:var(--card2);padding:1px 6px;border-radius:6px;">.ics</code> 文件导入 iPhone / Mac 日历，系统会按时响铃提醒。修改药物后请重新导出。</div>
+      <button class="btn btn-accent" style="margin-top:0;" onclick="exportMedsToIcs()">导出服药提醒到日历</button>
+    </div>`;
+  c.innerHTML=list+exportBlock;
 }
 function openAdd(){
   editId=null;selColorIdx=0;selColor=PALETTE_ACTUAL[0];
@@ -1116,6 +1125,123 @@ function tick(){
 }
 setInterval(tick,10000);tick();
 
+// ─── ICS EXPORT (日历导出) ───────────────────────────────────────────────────
+const WD_BYDAY=['SU','MO','TU','WE','TH','FR','SA'];
+function icsEscape(s){
+  return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/\r?\n/g,'\\n').replace(/,/g,'\\,').replace(/;/g,'\\;');
+}
+function icsDtFloat(dateStr,hhmm){
+  const [h,m]=(hhmm||'00:00').split(':');
+  return dateStr.replace(/-/g,'')+'T'+h+m+'00';
+}
+function icsNowUtc(){
+  const d=new Date();
+  return `${d.getUTCFullYear()}${p(d.getUTCMonth()+1)}${p(d.getUTCDate())}T${p(d.getUTCHours())}${p(d.getUTCMinutes())}${p(d.getUTCSeconds())}Z`;
+}
+function addDaysStr(dateStr,days){
+  const d=parseLocalDateOnly(dateStr); if(!d) return dateStr;
+  d.setDate(d.getDate()+days);
+  return ds(d);
+}
+function nextDstrMatchingWeekdays(fromDstr,days){
+  const from=parseLocalDateOnly(fromDstr); if(!from) return fromDstr;
+  for(let i=0;i<7;i++){
+    const d=new Date(from); d.setDate(d.getDate()+i);
+    if(days.includes(d.getDay())) return ds(d);
+  }
+  return fromDstr;
+}
+function nextOccurrenceOnOrAfter(startDateStr,today,every){
+  if(startDateStr>=today) return startDateStr;
+  const from=parseLocalDateOnly(startDateStr), to=parseLocalDateOnly(today);
+  if(!from||!to) return startDateStr;
+  const diff=Math.round((to-from)/86400000);
+  const offset=Math.ceil(diff/every)*every;
+  return addDaysStr(startDateStr,offset);
+}
+
+function buildIcsForMeds(sourceMeds){
+  const today=getTodayStr();
+  const stamp=icsNowUtc();
+  const lines=[
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Pillly//Medication Reminders//ZH',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'X-WR-CALNAME:Pillly 服药提醒',
+    'X-WR-TIMEZONE:Asia/Shanghai'
+  ];
+  let count=0;
+  (sourceMeds||[]).forEach(med=>{
+    const times=(med.times||[]).filter(Boolean);
+    if(!times.length) return;
+    const s=med.schedule||{type:'every_day'};
+    times.forEach(time=>{
+      const occurrences=[];
+      if(s.type==='every_day'){
+        occurrences.push({uid:`${med.id}-${time}-d`,start:today,rrule:'FREQ=DAILY'});
+      } else if(s.type==='weekly'){
+        const days=(s.days||[]).map(Number).filter(d=>d>=0&&d<=6);
+        if(!days.length) return;
+        const start=nextDstrMatchingWeekdays(today,days);
+        occurrences.push({uid:`${med.id}-${time}-w`,start,rrule:`FREQ=WEEKLY;BYDAY=${days.map(d=>WD_BYDAY[d]).join(',')}`});
+      } else if(s.type==='interval'){
+        if(!s.startDate) return;
+        const every=Math.max(1,Math.floor(s.every||1));
+        const start=nextOccurrenceOnOrAfter(s.startDate,today,every);
+        occurrences.push({uid:`${med.id}-${time}-i`,start,rrule:`FREQ=DAILY;INTERVAL=${every}`});
+      } else if(s.type==='course'){
+        if(!s.startDate) return;
+        const onDays=Math.max(1,Math.floor(s.onDays||7));
+        const offDays=Math.max(1,Math.floor(s.offDays||3));
+        const cycle=onDays+offDays;
+        for(let k=0;k<onDays;k++){
+          const firstDay=addDaysStr(s.startDate,k);
+          const start=nextOccurrenceOnOrAfter(firstDay,today,cycle);
+          occurrences.push({uid:`${med.id}-${time}-c${k}`,start,rrule:`FREQ=DAILY;INTERVAL=${cycle}`});
+        }
+      }
+      occurrences.forEach(ev=>{
+        lines.push(
+          'BEGIN:VEVENT',
+          `UID:${ev.uid}@pillly`,
+          `DTSTAMP:${stamp}`,
+          `DTSTART:${icsDtFloat(ev.start,time)}`,
+          'DURATION:PT10M',
+          `RRULE:${ev.rrule}`,
+          `SUMMARY:${icsEscape(med.name)} · 服药提醒`,
+          `DESCRIPTION:${icsEscape('服药时间 '+time)}`,
+          'BEGIN:VALARM',
+          'ACTION:DISPLAY',
+          `DESCRIPTION:${icsEscape(med.name||'服药提醒')}`,
+          'TRIGGER:PT0M',
+          'END:VALARM',
+          'END:VEVENT'
+        );
+        count++;
+      });
+    });
+  });
+  lines.push('END:VCALENDAR');
+  return {ics:lines.join('\r\n'),count};
+}
+
+function exportMedsToIcs(){
+  if(!meds||!meds.length){toast('还没有药物可导出');return;}
+  const {ics,count}=buildIcsForMeds(meds);
+  if(!count){toast('没有带提醒时间的药物');return;}
+  const blob=new Blob([ics],{type:'text/calendar;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='pillly-reminders.ics';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},500);
+  toast(`已生成 ${count} 条提醒，点开导入系统日历`);
+}
+
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
 async function loadAndStart(){
   show('loadingScreen');
@@ -1129,17 +1255,18 @@ async function loadAndStart(){
   }
 
   try{
-    // Load meds
-    const {data:medsData,error:medsErr}=await sb.from('medications').select('*').eq('user_id',currentUser.id);
-    if(medsErr)throw medsErr;
-    meds=(medsData||[]).map(m=>({id:m.id,name:m.name,color:m.color,times:m.times,schedule:m.schedule||{type:'every_day'}}));
-
-    // Load records: current month + previous month
     const now=getNow();
     const prevY=now.getMonth()===0?now.getFullYear()-1:now.getFullYear();
     const prevM=now.getMonth()===0?11:now.getMonth()-1;
     const fromDate=`${prevY}-${p(prevM+1)}-01`;
-    const {data:recsData,error:recsErr}=await sb.from('medication_records').select('*').eq('user_id',currentUser.id).gte('date',fromDate);
+    const [medsRes,recsRes]=await Promise.all([
+      sb.from('medications').select('*').eq('user_id',currentUser.id),
+      sb.from('medication_records').select('*').eq('user_id',currentUser.id).gte('date',fromDate)
+    ]);
+    const {data:medsData,error:medsErr}=medsRes;
+    const {data:recsData,error:recsErr}=recsRes;
+    if(medsErr)throw medsErr;
+    meds=(medsData||[]).map(m=>({id:m.id,name:m.name,color:m.color,times:m.times,schedule:m.schedule||{type:'every_day'}}));
     if(recsErr)throw recsErr;
     records={};
     (recsData||[]).forEach(r=>{
