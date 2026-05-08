@@ -353,8 +353,8 @@ body{
       <div class="action-arrow">›</div>
     </div>
   </div>
-  <div class="section-label">其他</div>
-  <div class="action-list">
+  <div class="section-label" id="profileOtherLabel" style="display:none;">其他</div>
+  <div class="action-list" id="profileSignOutBlock" style="display:none;">
     <div class="action-row" onclick="doSignOut()">
       <div class="action-icon" style="background:var(--danger-bg)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -1060,17 +1060,24 @@ function renderProfile(){
   const avatarEl=document.getElementById('profileAvatar');
   const nameEl=document.getElementById('profileName');
   const emailEl=document.getElementById('profileEmail');
+  const signOutBlock=document.getElementById('profileSignOutBlock');
+  const otherLabel=document.getElementById('profileOtherLabel');
 
   if(!currentUser){
     avatarEl.textContent='?';
     nameEl.textContent='未登录';
     emailEl.textContent='';
+    if(signOutBlock) signOutBlock.style.display='none';
+    if(otherLabel) otherLabel.style.display='none';
     return;
   }
-  const name=currentUser.user_metadata?.name||'用户';
+  const isAnon=!!currentUser.is_anonymous;
+  const name=currentUser.user_metadata?.name||(isAnon?'本地用户':'用户');
   avatarEl.textContent=initials(name);
   nameEl.textContent=name;
-  emailEl.textContent=currentUser.email||'';
+  emailEl.textContent=isAnon?'本地账号 · 未绑定':(currentUser.email||currentUser.phone||'');
+  if(signOutBlock) signOutBlock.style.display=isAnon?'none':'';
+  if(otherLabel) otherLabel.style.display=isAnon?'none':'';
 }
 
 function openProfileEdit(type){
@@ -1250,7 +1257,7 @@ async function loadAndStart(){
   if(!currentUser){
     hideSync();
     document.getElementById('loadingScreen').style.display='none';
-    showLogin();
+    toast('初始化失败，请刷新重试');
     return;
   }
 
@@ -1291,15 +1298,34 @@ async function loadAndStart(){
   renderToday();
 }
 
+async function ensureAnonymousSession(){
+  let {data:{session}}=await sb.auth.getSession();
+  if(session) return session;
+  const {data,error}=await sb.auth.signInAnonymously();
+  if(error){
+    console.error('anon sign-in failed',error);
+    return null;
+  }
+  return data.session;
+}
+
 (async()=>{
-  const {data:{session}}=await sb.auth.getSession();
+  const session=await ensureAnonymousSession();
   currentUser=session?.user||null;
   hide('loadingScreen');
+  if(!currentUser){
+    toast('初始化失败，请刷新重试');
+    return;
+  }
   // Keep UI in sync even if token refreshes / signs out
   sb.auth.onAuthStateChange((evt, nextSession)=>{
     currentUser=nextSession?.user||null;
     if(!currentUser){
-      showLogin();
+      // Don't show login on signOut/expiry — silently try to recover anonymous identity
+      ensureAnonymousSession().then(s=>{
+        currentUser=s?.user||null;
+        if(currentUser) renderProfile();
+      });
       return;
     }
     // If user just signed in (or session restored), load data once.
